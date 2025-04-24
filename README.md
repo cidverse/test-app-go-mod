@@ -2,7 +2,7 @@
 
 # Description
 
-> A sample go-mod cli application, used to test and validate continuous integration pipelines.
+> A go mod cli application, used to test and validate continuous integration pipelines.
 
 ## License
 
