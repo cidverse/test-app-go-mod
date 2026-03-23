@@ -1,11 +1,12 @@
 {
   "workflows": {
     "Nightly": {
-      "version": "0.5.0",
+      "version": "0.9.0",
       "name": "Nightly",
       "name_slug": "nightly",
       "job_timeout": 10,
       "default_branch": "main",
+      "container_runtime": "podman",
       "workflow_key": "nightly",
       "workflow_config": {
         "type": "nightly",
@@ -19,6 +20,7 @@
         "stages": [
           "build",
           "test",
+          "lint",
           "scan"
         ],
         "steps": [
@@ -28,8 +30,9 @@
             "slug": "go-build-cidverse-test-app-go-mod",
             "stage": "build",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-build",
+            "action": "builtin://actions/go-build",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -89,8 +92,9 @@
             "slug": "go-test-cidverse-test-app-go-mod",
             "stage": "test",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-test",
+            "action": "builtin://actions/go-test",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -163,23 +167,33 @@
           },
           {
             "id": "2",
-            "name": "gitleaks-scan",
-            "slug": "gitleaks-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+gitleaks-scan",
+            "name": "golangci-lint [cidverse/test-app-go-mod]",
+            "slug": "golangci-lint-cidverse-test-app-go-mod",
+            "stage": "lint",
+            "scope": "module",
+            "action": "builtin://actions/golangci-lint",
+            "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
-                  "name": "gitleaks",
+                  "name": "golangci-lint",
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
+                {
+                  "host": "proxy.golang.org:443"
+                },
+                {
+                  "host": "storage.googleapis.com:443"
+                },
+                {
+                  "host": "sum.golang.org:443"
+                },
                 {
                   "host": "github.com:443"
                 },
@@ -223,11 +237,70 @@
           },
           {
             "id": "3",
+            "name": "gitleaks-scan",
+            "slug": "gitleaks-scan",
+            "stage": "scan",
+            "scope": "project",
+            "action": "builtin://actions/gitleaks-scan",
+            "access": {
+              "executables": [
+                {
+                  "name": "gitleaks",
+                  "constraint": "\u003e= 0.0.0-0"
+                },
+                {
+                  "name": "gitlab-sarif-converter"
+                }
+              ],
+              "network": [
+                {
+                  "host": "github.com:443"
+                },
+                {
+                  "host": "api.github.com:443"
+                },
+                {
+                  "host": "codeload.github.com:443"
+                },
+                {
+                  "host": "uploads.github.com:443"
+                },
+                {
+                  "host": "objects.githubusercontent.com:443"
+                },
+                {
+                  "host": "raw.githubusercontent.com:443"
+                },
+                {
+                  "host": "ghcr.io:443"
+                },
+                {
+                  "host": "pkg-containers.githubusercontent.com:443"
+                }
+              ]
+            },
+            "inputs": {},
+            "outputs": {
+              "artifacts": [
+                {
+                  "type": "report",
+                  "format": "sarif"
+                },
+                {
+                  "type": "report",
+                  "format": "gl-codequality"
+                }
+              ]
+            },
+            "order": 3
+          },
+          {
+            "id": "4",
             "name": "semgrep-scan",
             "slug": "semgrep-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+semgrep-scan",
+            "action": "builtin://actions/semgrep-scan",
             "access": {
               "env": [
                 {
@@ -246,8 +319,7 @@
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -293,15 +365,15 @@
                 }
               ]
             },
-            "order": 3
+            "order": 4
           },
           {
-            "id": "4",
+            "id": "5",
             "name": "trivyfs-scan",
             "slug": "trivyfs-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+trivyfs-scan",
+            "action": "builtin://actions/trivyfs-scan",
             "access": {
               "executables": [
                 {
@@ -309,8 +381,7 @@
                   "constraint": "=\u003e 0.61.0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -356,83 +427,22 @@
                 }
               ]
             },
-            "order": 4
-          },
-          {
-            "id": "5",
-            "name": "zizmor-scan",
-            "slug": "zizmor-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+zizmor-scan",
-            "access": {
-              "env": [
-                {
-                  "name": "GH_HOSTNAME",
-                  "description": "GH_HOSTNAME is required for some online audits"
-                },
-                {
-                  "name": "GH_TOKEN",
-                  "description": "GH_TOKEN is required for some online audits"
-                }
-              ],
-              "executables": [
-                {
-                  "name": "zizmor",
-                  "constraint": "=\u003e 1.4.1"
-                }
-              ],
-              "network": [
-                {
-                  "host": "github.com:443"
-                },
-                {
-                  "host": "api.github.com:443"
-                },
-                {
-                  "host": "codeload.github.com:443"
-                },
-                {
-                  "host": "uploads.github.com:443"
-                },
-                {
-                  "host": "objects.githubusercontent.com:443"
-                },
-                {
-                  "host": "raw.githubusercontent.com:443"
-                },
-                {
-                  "host": "ghcr.io:443"
-                },
-                {
-                  "host": "pkg-containers.githubusercontent.com:443"
-                }
-              ]
-            },
-            "inputs": {},
-            "outputs": {
-              "artifacts": [
-                {
-                  "type": "report",
-                  "format": "sarif"
-                }
-              ]
-            },
             "order": 5
           }
         ]
       },
       "workflow_dependency": {
-        "cid": {
-          "id": "cid",
-          "type": "binary",
-          "version": "0.5.0"
+        "pkg:docker/podman/stable?repository_url=quay.io": {
+          "id": "podman/stable",
+          "type": "docker",
+          "version": "v5.8.1-immutable",
+          "hash": "42d8b3d789333f07e631305325a02b4ab33c3f107413e04b612973a72f1d7deb",
+          "repository": "quay.io"
         },
-        "quay.io/podman/stable": {
-          "id": "quay.io/podman/stable",
-          "type": "oci-container",
-          "version": "v5.4.2-immutable",
-          "hash": "642704dd0bcd909b722a06e0dbe199bc74163047886c3d5c869fe2c0d8e3d4d5"
+        "pkg:github/cidverse/cid": {
+          "id": "cidverse/cid",
+          "type": "github",
+          "version": "0.9.0"
         }
       },
       "ignore_files": [
@@ -442,15 +452,17 @@
         ".gitattributes",
         ".editorconfig",
         "renovate.json",
-        "CODEOWNERS"
+        "CODEOWNERS",
+        "SECURITY.md"
       ]
     },
     "Pull Request": {
-      "version": "0.5.0",
+      "version": "0.9.0",
       "name": "Pull Request",
       "name_slug": "pull-request",
       "job_timeout": 10,
       "default_branch": "main",
+      "container_runtime": "podman",
       "workflow_key": "pull-request",
       "workflow_config": {
         "type": "pull-request",
@@ -462,6 +474,7 @@
         "stages": [
           "build",
           "test",
+          "lint",
           "scan"
         ],
         "steps": [
@@ -471,8 +484,9 @@
             "slug": "go-build-cidverse-test-app-go-mod",
             "stage": "build",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-build",
+            "action": "builtin://actions/go-build",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -532,8 +546,9 @@
             "slug": "go-test-cidverse-test-app-go-mod",
             "stage": "test",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-test",
+            "action": "builtin://actions/go-test",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -606,23 +621,33 @@
           },
           {
             "id": "2",
-            "name": "gitleaks-scan",
-            "slug": "gitleaks-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+gitleaks-scan",
+            "name": "golangci-lint [cidverse/test-app-go-mod]",
+            "slug": "golangci-lint-cidverse-test-app-go-mod",
+            "stage": "lint",
+            "scope": "module",
+            "action": "builtin://actions/golangci-lint",
+            "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
-                  "name": "gitleaks",
+                  "name": "golangci-lint",
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
+                {
+                  "host": "proxy.golang.org:443"
+                },
+                {
+                  "host": "storage.googleapis.com:443"
+                },
+                {
+                  "host": "sum.golang.org:443"
+                },
                 {
                   "host": "github.com:443"
                 },
@@ -666,11 +691,70 @@
           },
           {
             "id": "3",
+            "name": "gitleaks-scan",
+            "slug": "gitleaks-scan",
+            "stage": "scan",
+            "scope": "project",
+            "action": "builtin://actions/gitleaks-scan",
+            "access": {
+              "executables": [
+                {
+                  "name": "gitleaks",
+                  "constraint": "\u003e= 0.0.0-0"
+                },
+                {
+                  "name": "gitlab-sarif-converter"
+                }
+              ],
+              "network": [
+                {
+                  "host": "github.com:443"
+                },
+                {
+                  "host": "api.github.com:443"
+                },
+                {
+                  "host": "codeload.github.com:443"
+                },
+                {
+                  "host": "uploads.github.com:443"
+                },
+                {
+                  "host": "objects.githubusercontent.com:443"
+                },
+                {
+                  "host": "raw.githubusercontent.com:443"
+                },
+                {
+                  "host": "ghcr.io:443"
+                },
+                {
+                  "host": "pkg-containers.githubusercontent.com:443"
+                }
+              ]
+            },
+            "inputs": {},
+            "outputs": {
+              "artifacts": [
+                {
+                  "type": "report",
+                  "format": "sarif"
+                },
+                {
+                  "type": "report",
+                  "format": "gl-codequality"
+                }
+              ]
+            },
+            "order": 3
+          },
+          {
+            "id": "4",
             "name": "semgrep-scan",
             "slug": "semgrep-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+semgrep-scan",
+            "action": "builtin://actions/semgrep-scan",
             "access": {
               "env": [
                 {
@@ -689,8 +773,7 @@
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -736,15 +819,15 @@
                 }
               ]
             },
-            "order": 3
+            "order": 4
           },
           {
-            "id": "4",
+            "id": "5",
             "name": "trivyfs-scan",
             "slug": "trivyfs-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+trivyfs-scan",
+            "action": "builtin://actions/trivyfs-scan",
             "access": {
               "executables": [
                 {
@@ -752,8 +835,7 @@
                   "constraint": "=\u003e 0.61.0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -799,83 +881,22 @@
                 }
               ]
             },
-            "order": 4
-          },
-          {
-            "id": "5",
-            "name": "zizmor-scan",
-            "slug": "zizmor-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+zizmor-scan",
-            "access": {
-              "env": [
-                {
-                  "name": "GH_HOSTNAME",
-                  "description": "GH_HOSTNAME is required for some online audits"
-                },
-                {
-                  "name": "GH_TOKEN",
-                  "description": "GH_TOKEN is required for some online audits"
-                }
-              ],
-              "executables": [
-                {
-                  "name": "zizmor",
-                  "constraint": "=\u003e 1.4.1"
-                }
-              ],
-              "network": [
-                {
-                  "host": "github.com:443"
-                },
-                {
-                  "host": "api.github.com:443"
-                },
-                {
-                  "host": "codeload.github.com:443"
-                },
-                {
-                  "host": "uploads.github.com:443"
-                },
-                {
-                  "host": "objects.githubusercontent.com:443"
-                },
-                {
-                  "host": "raw.githubusercontent.com:443"
-                },
-                {
-                  "host": "ghcr.io:443"
-                },
-                {
-                  "host": "pkg-containers.githubusercontent.com:443"
-                }
-              ]
-            },
-            "inputs": {},
-            "outputs": {
-              "artifacts": [
-                {
-                  "type": "report",
-                  "format": "sarif"
-                }
-              ]
-            },
             "order": 5
           }
         ]
       },
       "workflow_dependency": {
-        "cid": {
-          "id": "cid",
-          "type": "binary",
-          "version": "0.5.0"
+        "pkg:docker/podman/stable?repository_url=quay.io": {
+          "id": "podman/stable",
+          "type": "docker",
+          "version": "v5.8.1-immutable",
+          "hash": "42d8b3d789333f07e631305325a02b4ab33c3f107413e04b612973a72f1d7deb",
+          "repository": "quay.io"
         },
-        "quay.io/podman/stable": {
-          "id": "quay.io/podman/stable",
-          "type": "oci-container",
-          "version": "v5.4.2-immutable",
-          "hash": "642704dd0bcd909b722a06e0dbe199bc74163047886c3d5c869fe2c0d8e3d4d5"
+        "pkg:github/cidverse/cid": {
+          "id": "cidverse/cid",
+          "type": "github",
+          "version": "0.9.0"
         }
       },
       "ignore_files": [
@@ -885,15 +906,17 @@
         ".gitattributes",
         ".editorconfig",
         "renovate.json",
-        "CODEOWNERS"
+        "CODEOWNERS",
+        "SECURITY.md"
       ]
     },
     "Release": {
-      "version": "0.5.0",
+      "version": "0.9.0",
       "name": "Release",
       "name_slug": "release",
       "job_timeout": 10,
       "default_branch": "main",
+      "container_runtime": "podman",
       "workflow_key": "release",
       "workflow_config": {
         "type": "release",
@@ -919,8 +942,9 @@
             "slug": "go-build-cidverse-test-app-go-mod",
             "stage": "build",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-build",
+            "action": "builtin://actions/go-build",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -980,8 +1004,9 @@
             "slug": "go-test-cidverse-test-app-go-mod",
             "stage": "test",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-test",
+            "action": "builtin://actions/go-test",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -1058,7 +1083,7 @@
             "slug": "gitleaks-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+gitleaks-scan",
+            "action": "builtin://actions/gitleaks-scan",
             "access": {
               "executables": [
                 {
@@ -1066,8 +1091,7 @@
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -1118,7 +1142,7 @@
             "slug": "semgrep-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+semgrep-scan",
+            "action": "builtin://actions/semgrep-scan",
             "access": {
               "env": [
                 {
@@ -1137,8 +1161,7 @@
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -1192,7 +1215,7 @@
             "slug": "trivyfs-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+trivyfs-scan",
+            "action": "builtin://actions/trivyfs-scan",
             "access": {
               "executables": [
                 {
@@ -1200,8 +1223,7 @@
                   "constraint": "=\u003e 0.61.0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -1251,88 +1273,24 @@
           },
           {
             "id": "5",
-            "name": "zizmor-scan",
-            "slug": "zizmor-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+zizmor-scan",
-            "access": {
-              "env": [
-                {
-                  "name": "GH_HOSTNAME",
-                  "description": "GH_HOSTNAME is required for some online audits"
-                },
-                {
-                  "name": "GH_TOKEN",
-                  "description": "GH_TOKEN is required for some online audits"
-                }
-              ],
-              "executables": [
-                {
-                  "name": "zizmor",
-                  "constraint": "=\u003e 1.4.1"
-                }
-              ],
-              "network": [
-                {
-                  "host": "github.com:443"
-                },
-                {
-                  "host": "api.github.com:443"
-                },
-                {
-                  "host": "codeload.github.com:443"
-                },
-                {
-                  "host": "uploads.github.com:443"
-                },
-                {
-                  "host": "objects.githubusercontent.com:443"
-                },
-                {
-                  "host": "raw.githubusercontent.com:443"
-                },
-                {
-                  "host": "ghcr.io:443"
-                },
-                {
-                  "host": "pkg-containers.githubusercontent.com:443"
-                }
-              ]
-            },
-            "inputs": {},
-            "outputs": {
-              "artifacts": [
-                {
-                  "type": "report",
-                  "format": "sarif"
-                }
-              ]
-            },
-            "order": 5
-          },
-          {
-            "id": "6",
             "name": "changelog-generate",
             "slug": "changelog-generate",
             "stage": "publish",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+changelog-generate",
+            "action": "builtin://actions/changelog-generate",
             "run-after": [
               "gitleaks-scan",
               "go-build-cidverse-test-app-go-mod",
               "go-test-cidverse-test-app-go-mod",
               "semgrep-scan",
-              "trivyfs-scan",
-              "zizmor-scan"
+              "trivyfs-scan"
             ],
             "run-after-by-name": [
               "gitleaks-scan",
               "go-build [cidverse/test-app-go-mod]",
               "go-test [cidverse/test-app-go-mod]",
               "semgrep-scan",
-              "trivyfs-scan",
-              "zizmor-scan"
+              "trivyfs-scan"
             ],
             "access": {
               "network": [
@@ -1370,23 +1328,22 @@
                 }
               ]
             },
-            "order": 6
+            "order": 5
           },
           {
-            "id": "7",
+            "id": "6",
             "name": "gitlab-release-publish",
             "slug": "gitlab-release-publish",
             "stage": "publish",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+gitlab-release-publish",
+            "action": "builtin://actions/gitlab-release-publish",
             "run-after": [
               "changelog-generate",
               "gitleaks-scan",
               "go-build-cidverse-test-app-go-mod",
               "go-test-cidverse-test-app-go-mod",
               "semgrep-scan",
-              "trivyfs-scan",
-              "zizmor-scan"
+              "trivyfs-scan"
             ],
             "run-after-by-name": [
               "changelog-generate",
@@ -1394,8 +1351,7 @@
               "go-build [cidverse/test-app-go-mod]",
               "go-test [cidverse/test-app-go-mod]",
               "semgrep-scan",
-              "trivyfs-scan",
-              "zizmor-scan"
+              "trivyfs-scan"
             ],
             "uses-output-of": [
               "changelog-generate",
@@ -1459,21 +1415,22 @@
               ]
             },
             "outputs": {},
-            "order": 7
+            "order": 6
           }
         ]
       },
       "workflow_dependency": {
-        "cid": {
-          "id": "cid",
-          "type": "binary",
-          "version": "0.5.0"
+        "pkg:docker/podman/stable?repository_url=quay.io": {
+          "id": "podman/stable",
+          "type": "docker",
+          "version": "v5.8.1-immutable",
+          "hash": "42d8b3d789333f07e631305325a02b4ab33c3f107413e04b612973a72f1d7deb",
+          "repository": "quay.io"
         },
-        "quay.io/podman/stable": {
-          "id": "quay.io/podman/stable",
-          "type": "oci-container",
-          "version": "v5.4.2-immutable",
-          "hash": "642704dd0bcd909b722a06e0dbe199bc74163047886c3d5c869fe2c0d8e3d4d5"
+        "pkg:github/cidverse/cid": {
+          "id": "cidverse/cid",
+          "type": "github",
+          "version": "0.9.0"
         }
       },
       "ignore_files": [
@@ -1483,15 +1440,17 @@
         ".gitattributes",
         ".editorconfig",
         "renovate.json",
-        "CODEOWNERS"
+        "CODEOWNERS",
+        "SECURITY.md"
       ]
     },
     "Main": {
-      "version": "0.5.0",
+      "version": "0.9.0",
       "name": "Main",
       "name_slug": "main",
       "job_timeout": 10,
       "default_branch": "main",
+      "container_runtime": "podman",
       "workflow_key": "main",
       "workflow_config": {
         "type": "main",
@@ -1506,6 +1465,7 @@
         "stages": [
           "build",
           "test",
+          "lint",
           "scan"
         ],
         "steps": [
@@ -1515,8 +1475,9 @@
             "slug": "go-build-cidverse-test-app-go-mod",
             "stage": "build",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-build",
+            "action": "builtin://actions/go-build",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -1576,8 +1537,9 @@
             "slug": "go-test-cidverse-test-app-go-mod",
             "stage": "test",
             "scope": "module",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+go-test",
+            "action": "builtin://actions/go-test",
             "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
@@ -1650,23 +1612,33 @@
           },
           {
             "id": "2",
-            "name": "gitleaks-scan",
-            "slug": "gitleaks-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+gitleaks-scan",
+            "name": "golangci-lint [cidverse/test-app-go-mod]",
+            "slug": "golangci-lint-cidverse-test-app-go-mod",
+            "stage": "lint",
+            "scope": "module",
+            "action": "builtin://actions/golangci-lint",
+            "module": "gomod-go-mod",
+            "module-dir": ".",
             "access": {
               "executables": [
                 {
-                  "name": "gitleaks",
+                  "name": "golangci-lint",
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
+                {
+                  "host": "proxy.golang.org:443"
+                },
+                {
+                  "host": "storage.googleapis.com:443"
+                },
+                {
+                  "host": "sum.golang.org:443"
+                },
                 {
                   "host": "github.com:443"
                 },
@@ -1710,11 +1682,70 @@
           },
           {
             "id": "3",
+            "name": "gitleaks-scan",
+            "slug": "gitleaks-scan",
+            "stage": "scan",
+            "scope": "project",
+            "action": "builtin://actions/gitleaks-scan",
+            "access": {
+              "executables": [
+                {
+                  "name": "gitleaks",
+                  "constraint": "\u003e= 0.0.0-0"
+                },
+                {
+                  "name": "gitlab-sarif-converter"
+                }
+              ],
+              "network": [
+                {
+                  "host": "github.com:443"
+                },
+                {
+                  "host": "api.github.com:443"
+                },
+                {
+                  "host": "codeload.github.com:443"
+                },
+                {
+                  "host": "uploads.github.com:443"
+                },
+                {
+                  "host": "objects.githubusercontent.com:443"
+                },
+                {
+                  "host": "raw.githubusercontent.com:443"
+                },
+                {
+                  "host": "ghcr.io:443"
+                },
+                {
+                  "host": "pkg-containers.githubusercontent.com:443"
+                }
+              ]
+            },
+            "inputs": {},
+            "outputs": {
+              "artifacts": [
+                {
+                  "type": "report",
+                  "format": "sarif"
+                },
+                {
+                  "type": "report",
+                  "format": "gl-codequality"
+                }
+              ]
+            },
+            "order": 3
+          },
+          {
+            "id": "4",
             "name": "semgrep-scan",
             "slug": "semgrep-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+semgrep-scan",
+            "action": "builtin://actions/semgrep-scan",
             "access": {
               "env": [
                 {
@@ -1733,8 +1764,7 @@
                   "constraint": "\u003e= 0.0.0-0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -1780,15 +1810,15 @@
                 }
               ]
             },
-            "order": 3
+            "order": 4
           },
           {
-            "id": "4",
+            "id": "5",
             "name": "trivyfs-scan",
             "slug": "trivyfs-scan",
             "stage": "scan",
             "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+trivyfs-scan",
+            "action": "builtin://actions/trivyfs-scan",
             "access": {
               "executables": [
                 {
@@ -1796,8 +1826,7 @@
                   "constraint": "=\u003e 0.61.0"
                 },
                 {
-                  "name": "gitlab-sarif-converter",
-                  "constraint": "\u003e= 0.0.0-0"
+                  "name": "gitlab-sarif-converter"
                 }
               ],
               "network": [
@@ -1843,83 +1872,22 @@
                 }
               ]
             },
-            "order": 4
-          },
-          {
-            "id": "5",
-            "name": "zizmor-scan",
-            "slug": "zizmor-scan",
-            "stage": "scan",
-            "scope": "project",
-            "action": "container://ghcr.io/cidverse/cid-actions-go:0.1.0+zizmor-scan",
-            "access": {
-              "env": [
-                {
-                  "name": "GH_HOSTNAME",
-                  "description": "GH_HOSTNAME is required for some online audits"
-                },
-                {
-                  "name": "GH_TOKEN",
-                  "description": "GH_TOKEN is required for some online audits"
-                }
-              ],
-              "executables": [
-                {
-                  "name": "zizmor",
-                  "constraint": "=\u003e 1.4.1"
-                }
-              ],
-              "network": [
-                {
-                  "host": "github.com:443"
-                },
-                {
-                  "host": "api.github.com:443"
-                },
-                {
-                  "host": "codeload.github.com:443"
-                },
-                {
-                  "host": "uploads.github.com:443"
-                },
-                {
-                  "host": "objects.githubusercontent.com:443"
-                },
-                {
-                  "host": "raw.githubusercontent.com:443"
-                },
-                {
-                  "host": "ghcr.io:443"
-                },
-                {
-                  "host": "pkg-containers.githubusercontent.com:443"
-                }
-              ]
-            },
-            "inputs": {},
-            "outputs": {
-              "artifacts": [
-                {
-                  "type": "report",
-                  "format": "sarif"
-                }
-              ]
-            },
             "order": 5
           }
         ]
       },
       "workflow_dependency": {
-        "cid": {
-          "id": "cid",
-          "type": "binary",
-          "version": "0.5.0"
+        "pkg:docker/podman/stable?repository_url=quay.io": {
+          "id": "podman/stable",
+          "type": "docker",
+          "version": "v5.8.1-immutable",
+          "hash": "42d8b3d789333f07e631305325a02b4ab33c3f107413e04b612973a72f1d7deb",
+          "repository": "quay.io"
         },
-        "quay.io/podman/stable": {
-          "id": "quay.io/podman/stable",
-          "type": "oci-container",
-          "version": "v5.4.2-immutable",
-          "hash": "642704dd0bcd909b722a06e0dbe199bc74163047886c3d5c869fe2c0d8e3d4d5"
+        "pkg:github/cidverse/cid": {
+          "id": "cidverse/cid",
+          "type": "github",
+          "version": "0.9.0"
         }
       },
       "ignore_files": [
@@ -1929,7 +1897,8 @@
         ".gitattributes",
         ".editorconfig",
         "renovate.json",
-        "CODEOWNERS"
+        "CODEOWNERS",
+        "SECURITY.md"
       ]
     }
   }
