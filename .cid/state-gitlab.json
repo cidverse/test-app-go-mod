@@ -1,7 +1,7 @@
 {
   "workflows": {
     "Nightly": {
-      "version": "0.12.2",
+      "version": "0.12.3",
       "name": "Nightly",
       "name_slug": "nightly",
       "job_timeout": 20,
@@ -301,8 +301,8 @@
         "pkg:github/cidverse/cid": {
           "id": "cidverse/cid",
           "type": "github",
-          "version": "0.12.2",
-          "hash": "4a7e91c4eb2e2b9871e65e517699c97b7b1ea380c92c872edec5443c3978a43e",
+          "version": "0.12.3",
+          "hash": "b591cbfa4685d80ef240e118644786b0a1f5e83d8e34c454f6f60a78a95673bb",
           "gpg-fingerprint": "76A4948E69C62589C7B0AB84E414434DF5371FB6"
         }
       },
@@ -318,7 +318,7 @@
       ]
     },
     "Pull Request": {
-      "version": "0.12.2",
+      "version": "0.12.3",
       "name": "Pull Request",
       "name_slug": "pull-request",
       "job_timeout": 20,
@@ -616,8 +616,8 @@
         "pkg:github/cidverse/cid": {
           "id": "cidverse/cid",
           "type": "github",
-          "version": "0.12.2",
-          "hash": "4a7e91c4eb2e2b9871e65e517699c97b7b1ea380c92c872edec5443c3978a43e",
+          "version": "0.12.3",
+          "hash": "b591cbfa4685d80ef240e118644786b0a1f5e83d8e34c454f6f60a78a95673bb",
           "gpg-fingerprint": "76A4948E69C62589C7B0AB84E414434DF5371FB6"
         }
       },
@@ -633,7 +633,7 @@
       ]
     },
     "Release": {
-      "version": "0.12.2",
+      "version": "0.12.3",
       "name": "Release",
       "name_slug": "release",
       "job_timeout": 20,
@@ -1007,6 +1007,18 @@
                   "name": "^SIGSTORE_ID_TOKEN$",
                   "pattern": true,
                   "secret": true
+                },
+                {
+                  "name": "^GITHUB_SERVER_URL$",
+                  "pattern": true
+                },
+                {
+                  "name": "^GITHUB_WORKFLOW_REF$",
+                  "pattern": true
+                },
+                {
+                  "name": "^CI_RUNNER_ID$",
+                  "pattern": true
                 }
               ],
               "network": [
@@ -1186,8 +1198,8 @@
         "pkg:github/cidverse/cid": {
           "id": "cidverse/cid",
           "type": "github",
-          "version": "0.12.2",
-          "hash": "4a7e91c4eb2e2b9871e65e517699c97b7b1ea380c92c872edec5443c3978a43e",
+          "version": "0.12.3",
+          "hash": "b591cbfa4685d80ef240e118644786b0a1f5e83d8e34c454f6f60a78a95673bb",
           "gpg-fingerprint": "76A4948E69C62589C7B0AB84E414434DF5371FB6"
         }
       },
@@ -1203,7 +1215,7 @@
       ]
     },
     "Main": {
-      "version": "0.12.2",
+      "version": "0.12.3",
       "name": "Main",
       "name_slug": "main",
       "job_timeout": 20,
@@ -1501,8 +1513,8 @@
         "pkg:github/cidverse/cid": {
           "id": "cidverse/cid",
           "type": "github",
-          "version": "0.12.2",
-          "hash": "4a7e91c4eb2e2b9871e65e517699c97b7b1ea380c92c872edec5443c3978a43e",
+          "version": "0.12.3",
+          "hash": "b591cbfa4685d80ef240e118644786b0a1f5e83d8e34c454f6f60a78a95673bb",
           "gpg-fingerprint": "76A4948E69C62589C7B0AB84E414434DF5371FB6"
         }
       },
